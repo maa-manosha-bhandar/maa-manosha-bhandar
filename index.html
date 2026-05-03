@@ -477,7 +477,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:va
       </svg>
       Sign in with Google
     </button>
-    <div class="auth-hint">🔒 Only <strong>admin accounts</strong> are authorised.<br/>All other accounts will be rejected.</div>
+    <div class="auth-hint">🔒 Only <strong>sarkarsumit0204@gmail.com</strong> is authorised.<br/>All other accounts will be rejected.</div>
   </div>
 </div>
 
@@ -862,6 +862,34 @@ function doPost(e) {
 
 function out(obj){
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function backupData() {
+  var BACKUP_SHEET_ID = "PASTE_YOUR_BACKUP_SPREADSHEET_ID_HERE"; // ← paste your backup sheet ID
+  
+  var source = SpreadsheetApp.getActiveSpreadsheet();
+  var dest   = SpreadsheetApp.openById(BACKUP_SHEET_ID);
+  var timestamp = Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd");
+  var sheetsToCopy = ["Inventory", "Invoices"];
+  
+  sheetsToCopy.forEach(function(name) {
+    var src = source.getSheetByName(name);
+    if (!src) return;
+    var backupName = name + "_backup_" + timestamp;
+    var existing = dest.getSheetByName(backupName);
+    if (existing) dest.deleteSheet(existing);
+    var copy = src.copyTo(dest);
+    copy.setName(backupName);
+    // Keep only last 30 daily backups per sheet
+    var allBackups = dest.getSheets().filter(function(s) {
+      return s.getName().startsWith(name + "_backup_");
+    }).sort(function(a, b) {
+      return a.getName().localeCompare(b.getName());
+    });
+    while (allBackups.length > 30) dest.deleteSheet(allBackups.shift());
+  });
+  
+  Logger.log("Backup done: " + timestamp);
 }</pre>
       <button class="btn btn-gold btn-sm copy-btn" onclick="copyScript()">📋 Copy</button>
     </div>
@@ -887,7 +915,7 @@ const LOGO_SRC = ""; // paste base64 here
 
 /* ═══════════════════ CONFIG ═════════════════════════════════ */
 // ↓ Paste your OAuth Client ID from console.cloud.google.com
-const GOOGLE_CLIENT_ID  = '1008883403652-aue7dq242ldg01aifkep4suj7a0duni4.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID  = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
 const ALLOWED_EMAIL     = 'sarkarsumit0204@gmail.com';
 const LS_SHEET_URL      = 'mmb_sheet_url';
 
