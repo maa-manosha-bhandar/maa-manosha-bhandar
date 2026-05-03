@@ -477,7 +477,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:va
       </svg>
       Sign in with Google
     </button>
-    <div class="auth-hint">🔒 Only <strong>admins</strong> are authorised.<br/>All other accounts will be rejected.</div>
+    <div class="auth-hint">🔒 Only <strong> admins accounts </strong> are authorised.<br/>All other accounts will be rejected.</div>
   </div>
 </div>
 
@@ -680,6 +680,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:va
 
   <div id="cart-items"></div>
   <div id="bill-total"></div>
+
   <div id="finalize-banner" class="finalize-banner" style="display:none">
     <div>
       <div class="finalize-banner-title">📋 Ready to finalize?</div>
@@ -708,7 +709,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:va
       </div>
     </div>
     <div class="sheets-bar-row">
-      <button class="btn btn-primary btn-sm" onclick="loadDashboardFromSheets(true)" id="btn-refresh-dash">🔄 Refresh Dashboard</button>
+      <button class="btn btn-primary btn-sm" onclick="loadDashboardFromSheets()" id="btn-refresh-dash">🔄 Refresh Dashboard</button>
     </div>
     <div class="sheets-status info" id="dash-sheets-status">Enter your Apps Script URL to load dashboard data.</div>
   </div>
@@ -1128,7 +1129,6 @@ async function reloadFromSheets(showFeedback){
       renderInventory();
       setSheetStatus(`✅ Loaded ${inventory.length} items from Sheets.`,"ok");
       if(showFeedback)toast(`✅ ${inventory.length} items loaded`);
-      retryPendingInvoices();
     }else{setSheetStatus(`❌ Error: ${data?data.error:"No response"}`,"err");renderInventory();}
   }catch(e){setSheetStatus(`❌ Failed: ${e.message}`,"err");renderInventory();}
   showLoading(false);
@@ -1218,7 +1218,7 @@ function addItem(){
   toast(`✅ "${name}" added`);pushInventoryToSheets();
 }
 
-async function deleteItem(id){
+function deleteItem(id){
   const item=inventory.find(i=>i.id===id);if(!item)return;
   showConfirm({icon:"🗑",title:"Remove Item?",msg:`"${item.name}" will be removed from inventory and Sheets.`,confirmLabel:"Remove",confirmClass:"btn-red-ghost",onConfirm:()=>{
     inventory=inventory.filter(i=>i.id!==id);renderInventory();toast("🗑 Item removed");pushInventoryToSheets();
@@ -1464,9 +1464,11 @@ async function generateInvoice(){
       <td class="r">${disc>0?`<div style="text-decoration:line-through;color:#aaa;font-size:11px">₹${fmtP(c.result.price)}</div>`:""}
       <strong>₹${fmtP(eff)}</strong>${disc>0?`<div style="font-size:10px;color:var(--jade)">−₹${fmtP(disc)} off</div>`:""}</td></tr>`;
   }).join("");
+  // originalTotal = sum of all item prices BEFORE any discounts
+  const originalTotal=done.reduce((s,c)=>s+(c.result?.price||0),0);
   let discRows="";
   if(totalItemDiscs>0||billDiscount>0){
-    discRows+=`<tr class="total-row"><td colspan="4" class="r">Subtotal</td><td class="r">₹${fmtP(subtotal+totalItemDiscs)}</td></tr>`;
+    discRows+=`<tr class="total-row"><td colspan="4" class="r">Subtotal (before discounts)</td><td class="r">₹${fmtP(originalTotal)}</td></tr>`;
     if(totalItemDiscs>0)discRows+=`<tr class="discount-row"><td colspan="4" class="r" style="color:var(--jade)">Item Discounts</td><td class="r" style="color:var(--jade)">−₹${fmtP(totalItemDiscs)}</td></tr>`;
     if(billDiscount>0){const lbl=billDiscountType==="pct"?`Bill Discount (${parseFloat(billDiscountValue)}%)`:"Bill Discount (Flat)";discRows+=`<tr class="discount-row"><td colspan="4" class="r" style="color:var(--red)">${lbl}</td><td class="r" style="color:var(--red)">−₹${fmtP(billDiscount)}</td></tr>`;}
     discRows+=`<tr class="grand-total-row"><td colspan="4" class="r">Grand Total</td><td class="r">₹${fmtP(grandTotal)}</td></tr>`;
@@ -1500,7 +1502,7 @@ function closeInvoiceAndNewBill(){
 let invoices=[],dashPeriod="today",dashPage=0;
 const DASH_PAGE_SIZE=20;
 
-async function loadDashboardFromSheets(force){
+async function loadDashboardFromSheets(){
   const url=getSheetUrl();
   if(!url){setDashSheetStatus("⚠️ Enter and save your Apps Script URL first.","info");return;}
   setDashSheetStatus("⏳ Loading invoices…","info");
@@ -1534,7 +1536,8 @@ function dashGoPage(p){dashPage=p;renderDashboard();}
 
 function filterInvoices(){
   const now=new Date(),todayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate());
-  const weekStart=new Date(todayStart);weekStart.setDate(weekStart.getDate()-weekStart.getDay());
+  // Week starts Monday (India standard): (getDay()||7)-1 gives 0=Mon … 6=Sun
+  const weekStart=new Date(todayStart);weekStart.setDate(weekStart.getDate()-((weekStart.getDay()||7)-1));
   const monthStart=new Date(now.getFullYear(),now.getMonth(),1);
   return invoices.filter(inv=>{
     const d=new Date(inv.timestamp);
@@ -1547,10 +1550,16 @@ function filterInvoices(){
 }
 
 function buildRevenueChart(filtered){
-  // Last 14 days bar chart
+  // Adapt chart range to the selected period
+  let numDays=14;
+  if(dashPeriod==="today") numDays=1;
+  else if(dashPeriod==="week") numDays=7;
+  else if(dashPeriod==="month") numDays=30;
+  else numDays=14; // "all" — show last 14 days as a window
+
   const days=[];
   const now=new Date();
-  for(let i=13;i>=0;i--){
+  for(let i=numDays-1;i>=0;i--){
     const d=new Date(now.getFullYear(),now.getMonth(),now.getDate()-i);
     const label=d.toLocaleDateString("en-IN",{day:"2-digit",month:"short"});
     const key=d.toDateString();
@@ -1570,11 +1579,12 @@ function buildRevenueChart(filtered){
       <div class="rev-bar" style="height:${h}px">
         <div class="rev-bar-tooltip">₹${fmtP(d.revenue)}<br/>${d.label}</div>
       </div>
-      <div class="rev-bar-lbl">${d.label.split(" ")[0]}</div>
+      <div class="rev-bar-lbl">${numDays===1?d.label:d.label.split(" ")[0]}</div>
     </div>`;
   }).join("");
+  const periodTotal=days.reduce((s,d)=>s+d.revenue,0);
   return`<div class="rev-chart-wrap"><div class="rev-bars">${bars}</div></div>
-  <div style="font-size:11px;color:var(--muted);margin-top:6px">Total over period: <strong style="color:var(--jade)">₹${fmtP(days.reduce((s,d)=>s+d.revenue,0))}</strong></div>`;
+  <div style="font-size:11px;color:var(--muted);margin-top:6px">Total shown: <strong style="color:var(--jade)">₹${fmtP(periodTotal)}</strong></div>`;
 }
 
 function renderDashboard(){
@@ -1643,7 +1653,7 @@ function showScreen(name){
   if(name==="home")tabs[0].classList.add("active");
   else if(name==="inventory")tabs[1].classList.add("active");
   else if(name==="billing")tabs[2].classList.add("active");
-  else if(name==="dashboard"){tabs[3].classList.add("active");loadDashboardFromSheets(false);}
+  else if(name==="dashboard"){tabs[3].classList.add("active");loadDashboardFromSheets();}
   window.scrollTo(0,0);
   if(name==="billing"){document.getElementById("no-sheets-billing").style.display=getSheetUrl()?"none":"block";}
 }
