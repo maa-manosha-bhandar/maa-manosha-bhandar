@@ -165,7 +165,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:va
   max-width:360px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,0.4);
   text-align:center;
 }
-.auth-logo{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--jade),var(--jade-light));display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 16px;box-shadow:0 6px 20px rgba(30,92,58,0.3);overflow:hidden}
+.auth-logo{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--jade),var(--jade-light));display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 16px;box-shadow:0 6px 20px rgba(30,92,58,0.3);overflow:hidden;flex-shrink:0}
 .auth-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--jade-dark);margin-bottom:4px}
 .auth-sub{font-size:12px;color:var(--muted);margin-bottom:24px;line-height:1.5}
 .auth-err{font-size:12px;color:var(--red);margin:10px 0;min-height:16px;line-height:1.5}
@@ -477,7 +477,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:va
       </svg>
       Sign in with Google
     </button>
-    <div class="auth-hint">🔒 Only <strong>sarkarsumit0204@gmail.com</strong> is authorised.<br/>All other accounts will be rejected.</div>
+    <div class="auth-hint">🔒 Only <strong>admins</strong> are authorised.<br/>All other accounts will be rejected.</div>
   </div>
 </div>
 
@@ -764,7 +764,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:va
     <h2 style="font-family:'Playfair Display',serif;font-size:22px;color:var(--jade-dark);margin-bottom:14px">Google Sheets Setup Guide</h2>
     <ol style="font-size:13px;line-height:2.2;color:var(--ink-soft);padding-left:20px">
       <li>Open <strong>Google Sheets</strong> → create a new spreadsheet.</li>
-      <li>Rename Sheet1 → <code style="background:var(--cream-dark);padding:1px 5px;border-radius:4px">Inventory</code> → add second sheet named <code style="background:var(--cream-dark);padding:1px 5px;border-radius:4px">Invoices</code>.</li>
+      <li>Rename Sheet1 → <code style="background:var(--cream-dark);padding:1px 5px;border-radius:4px">Inventory</code> → add second sheet named <code style="background:var(--cream-dark);padding:1px 5px;border-radius:4px">Invoices</code>. <strong>Leave both sheets completely empty</strong> — the script creates headers automatically.</li>
       <li>Go to <strong>Extensions → Apps Script</strong>.</li>
       <li>Delete default code → paste the script below.</li>
       <li>Click <strong>Deploy → New deployment → Web app</strong>.</li>
@@ -915,7 +915,7 @@ const LOGO_SRC = ""; // paste base64 here
 
 /* ═══════════════════ CONFIG ═════════════════════════════════ */
 // ↓ Paste your OAuth Client ID from console.cloud.google.com
-const GOOGLE_CLIENT_ID  = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID  = '1008883403652-aue7dq242ldg01aifkep4suj7a0duni4.apps.googleusercontent.com';
 const ALLOWED_EMAIL     = 'sarkarsumit0204@gmail.com';
 const LS_SHEET_URL      = 'mmb_sheet_url';
 
@@ -1074,6 +1074,8 @@ async function sheetsGet(params){
 }
 async function sheetsPost(action,data){
   const url=getSheetUrl();if(!url)return null;
+  // no-cors means we cannot read the response — we optimistically assume success
+  // and rely on the next pull to catch any real divergence
   await fetch(url,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,data})});
   return{ok:true};
 }
@@ -1100,13 +1102,15 @@ async function _executePush(){
     const prev=_lastPushedSnapshot?JSON.parse(_lastPushedSnapshot):[];
     const prevMap=new Map(prev.map(p=>[p.id,JSON.stringify(p)]));
     const prevIds=new Set(prev.map(p=>p.id));
-    // Items that are new or whose content changed
     const changed=inventory.filter(i=>prevMap.get(i.id)!==JSON.stringify(i));
-    // IDs that existed before but are gone now
     const deleted=[...prevIds].filter(id=>!inventory.find(i=>i.id===id));
     await sheetsPost("pushInventory",{changed,deleted});
+    // Optimistically update snapshot (no-cors means we can't confirm — user can Pull to verify)
     _lastPushedSnapshot=snap;
-    setSheetStatus(`✅ Saved — ${inventory.length} items in Sheets.`,"ok");
+    const summary=[];
+    if(changed.length)summary.push(`${changed.length} updated`);
+    if(deleted.length)summary.push(`${deleted.length} deleted`);
+    setSheetStatus(`✅ Sent to Sheets (${summary.join(", ")||"no changes"}). Pull to confirm.`,"ok");
   }catch(e){setSheetStatus(`❌ Failed: ${e.message}`,"err");toast("⚠️ Sync failed");}
   finally{_isSyncing=false;setSyncButtons(false);if(_pendingPush){_pendingPush=false;pushInventoryToSheets();}}
 }
@@ -1131,12 +1135,17 @@ async function reloadFromSheets(showFeedback){
 }
 
 function saveSheetUrl(){
-  const url=(document.getElementById('inv-sheet-url').value||document.getElementById('inv-sheet-url-dash').value).trim();
-  if(!url){toast('⚠️ Enter the URL first');return;}
+  // Read from whichever URL field the user just typed in, falling back to the other
+  const activeEl=document.activeElement;
+  let url='';
+  if(activeEl&&activeEl.id==='inv-sheet-url-dash') url=document.getElementById('inv-sheet-url-dash').value.trim();
+  else url=document.getElementById('inv-sheet-url').value.trim();
+  if(!url) url=(document.getElementById('inv-sheet-url').value||document.getElementById('inv-sheet-url-dash').value).trim();
+  if(!url){toast('⚠️ Enter the Apps Script URL first');return;}
   localStorage.setItem(LS_SHEET_URL,url);
   document.getElementById('inv-sheet-url').value=url;
   document.getElementById('inv-sheet-url-dash').value=url;
-  setSheetStatus("✅ URL saved! Loading…","ok");toast('✅ Sheet URL saved');
+  setSheetStatus("✅ URL saved! Loading inventory…","ok");toast('✅ Sheet URL saved');
   showLoading(true,"Loading inventory from Sheets…");reloadFromSheets(false);
 }
 function syncDashUrlField(){
