@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://maa-manosha-bhandar.github.io/maa-manosha-bhandar/sitemap.xml
