@@ -1,47 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 
-  <!-- Main page -->
   <url>
     <loc>https://maa-manosha-bhandar.github.io/maa-manosha-bhandar/</loc>
     <lastmod>2025-05-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://maa-manosha-bhandar.github.io/maa-manosha-bhandar/"/>
-    <xhtml:link rel="alternate" hreflang="bn" href="https://maa-manosha-bhandar.github.io/maa-manosha-bhandar/"/>
-  </url>
-
-  <!-- Services section -->
-  <url>
-    <loc>https://maa-manosha-bhandar.github.io/maa-manosha-bhandar/#services</loc>
-    <lastmod>2025-05-17</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
-  </url>
-
-  <!-- About section -->
-  <url>
-    <loc>https://maa-manosha-bhandar.github.io/maa-manosha-bhandar/#about</loc>
-    <lastmod>2025-05-17</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-
-  <!-- Compliance section -->
-  <url>
-    <loc>https://maa-manosha-bhandar.github.io/maa-manosha-bhandar/#compliance</loc>
-    <lastmod>2025-05-17</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <!-- Contact section -->
-  <url>
-    <loc>https://maa-manosha-bhandar.github.io/maa-manosha-bhandar/#contact</loc>
-    <lastmod>2025-05-17</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.8</priority>
   </url>
 
 </urlset>
