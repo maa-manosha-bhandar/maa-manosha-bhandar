@@ -1,5 +1,11 @@
 User-agent: *
 Allow: /
 
-# Sitemap location
+# Do not index verification files
+Disallow: /google4544759abbccebb1.html
+
+# Primary sitemap — GitHub Pages
 Sitemap: https://maa-manosha-bhandar.github.io/maa-manosha-bhandar/sitemap.xml
+
+# Mirror sitemap — Netlify
+Sitemap: https://maa-manosha-bhandar.netlify.app/sitemap.xml
